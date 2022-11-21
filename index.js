@@ -1,37 +1,47 @@
-const { getMint } = require("@solana/spl-token");
+import * as web3 from "@solana/web3.js";
+import * as solToken from "@solana/spl-token";
+import bs58 from "bs58";
+// connection
+const connection = new web3.Connection(web3.clusterApiUrl("devnet"), "confirmed");
+// Key of the owner of mint
+let userKey = web3.Keypair.fromSecretKey(bs58.decode("3ag6LWpm7Mb8rE2gNpkQZKVT4mZwpn3UDKf3RWBUN8W95hR5wkzzExD4mdPatzS6yjzm8v8Qfs2RHjm1aDXBwEPe"));
 
-sol = require("@solana/web3.js");
-solToken = require("@solana/spl-token");
-bs58 = require("bs58");
 
-const connection = new sol.Connection(sol.clusterApiUrl("devnet"));
-const publicKeySol = new sol.PublicKey('EsTCkUkyS4QrXELy62p1Ln39anxWGXbmjaXMdeCBu7Qm');
-const publicKeyBac = new sol.PublicKey('FFDyss8ZNKDoptctFbem76j5idS5yqWVc3kLsNhgFSpV');
 
+async function CreateTokenMint() {
+  const mintKeypair = new web3.Keypair();
+  const lamports = await solToken.getMinimumBalanceForRentExemptMint(connection);
+  const programid = solToken.TOKEN_PROGRAM_ID;
+
+  // const createAccount = web3.SystemProgram.createAccount({
+  //   payer: userKey.publicKey, 
+  //   accountPubkey: mintKeypair.publicKey,
+  //   lamports: lamports, 
+  //   space: solToken.MINT_SIZE,
+  //   programId: programid,
+  // });
+  let allocateInstruction = web3.SystemProgram.allocate({
+    accountPubkey: mintKeypair.publicKey,
+    space: 100,
+  });
+
+  const transaction = new web3.Transaction().add(
+    allocateInstruction,
+  );
+
+  var signature = await web3.sendAndConfirmTransaction(
+    connection, 
+    transaction, 
+    [userKey, mintKeypair]);
+
+  return signature;
+}
+
+async function GetSolBalance() {
+  return connection.getBalance(userKey.publicKey);
+}
 (async () => {
-  let balance = await connection.getBalance(publicKeySol);
-  console.log(`${balance / sol.LAMPORTS_PER_SOL} SOL`);
-
-  let BacBalance = await connection.getTokenAccountBalance(publicKeyBac);
-  console.log(BacBalance)
+  console.log(await CreateTokenMint());
+  //let balance = await connection.getBalance(publicKey);
+  //console.log(`${balance / LAMPORTS_PER_SOL} SOL`);
 })();
-
-// (async () => {
-
-//   const connection = new sol.Connection("https://api.devnet.solana.com");
-
-//   const tokenAccounts = await connection.getTokenAccountsByOwner(
-//     new sol.PublicKey('EsTCkUkyS4QrXELy62p1Ln39anxWGXbmjaXMdeCBu7Qm'),
-//     {
-//       programId: solToken.TOKEN_PROGRAM_ID,
-//     }
-//   );
-
-//   console.log("Token                                         Balance");
-//   console.log("------------------------------------------------------------");
-//   tokenAccounts.value.forEach((tokenAccount) => {
-//     const accountData = AccountLayout.decode(tokenAccount.account.data);
-//     console.log(`${new sol.PublicKey(accountData.mint)}   ${accountData.amount}`);
-//   })
-
-// })();
